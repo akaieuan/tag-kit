@@ -1,0 +1,61 @@
+{
+  "name": "@tag-kit/core",
+  "version": "0.1.0",
+  "description": "Schema, catalog helpers, agreement scoring, and scope-overlap matching for human-in-the-loop tagging workflows. Domain-agnostic — bring your own taxonomy.",
+  "license": "MIT",
+  "author": "Ieuan King",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/akaieuan/tag-kit.git",
+    "directory": "packages/core"
+  },
+  "homepage": "https://github.com/akaieuan/tag-kit#readme",
+  "bugs": "https://github.com/akaieuan/tag-kit/issues",
+  "keywords": [
+    "tagging",
+    "annotation",
+    "hitl",
+    "human-in-the-loop",
+    "moderation",
+    "labeling",
+    "calibration"
+  ],
+  "type": "module",
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js"
+    },
+    "./schema": {
+      "types": "./dist/schema.d.ts",
+      "import": "./dist/schema.js"
+    },
+    "./catalog": {
+      "types": "./dist/catalog.d.ts",
+      "import": "./dist/catalog.js"
+    },
+    "./scoring": {
+      "types": "./dist/scoring.d.ts",
+      "import": "./dist/scoring.js"
+    },
+    "./matching": {
+      "types": "./dist/matching.d.ts",
+      "import": "./dist/matching.js"
+    }
+  },
+  "files": ["dist"],
+  "scripts": {
+    "build": "tsc -p tsconfig.json",
+    "dev": "tsc -p tsconfig.json --watch",
+    "typecheck": "tsc -p tsconfig.json --noEmit",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "clean": "rm -rf dist .turbo *.tsbuildinfo"
+  },
+  "devDependencies": {
+    "typescript": "^5.7.3",
+    "vitest": "^2.1.8"
+  }
+}
