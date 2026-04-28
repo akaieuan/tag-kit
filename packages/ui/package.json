@@ -1,6 +1,6 @@
 {
   "name": "@tag-kit/ui",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "description": "Headless React components for tag-kit — TagPicker (catalog browser + search) and TagChip (display + remove). Bring your own styles.",
   "license": "MIT",
   "author": "Ieuan King",
