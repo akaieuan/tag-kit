@@ -1,0 +1,73 @@
+name: Bug report
+description: Report a bug in @tag-kit/core, @tag-kit/ui, or an example catalog
+title: "[bug] "
+labels: ["type/bug"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for filing. Please include enough context for someone to reproduce.
+
+  - type: input
+    id: version
+    attributes:
+      label: tag-kit version
+      description: From `packages/core/package.json` or `packages/ui/package.json` (or the commit SHA if you're on `main`).
+      placeholder: "0.1.0"
+    validations:
+      required: true
+
+  - type: dropdown
+    id: package
+    attributes:
+      label: Which package?
+      multiple: true
+      options:
+        - "@tag-kit/core"
+        - "@tag-kit/ui"
+        - "examples/moderation"
+        - docs
+        - other
+    validations:
+      required: true
+
+  - type: textarea
+    id: reproduction
+    attributes:
+      label: Reproduction
+      description: Minimal TypeScript snippet that constructs the tags and shows the unexpected behavior. A few lines is usually enough.
+      placeholder: |
+        ```ts
+        import { tagsMatch } from "@tag-kit/core";
+        const a = { tagId: "audio.harassment", scope: { modality: "audio", segment: { start: 10, end: 20 } } };
+        const b = { tagId: "audio.harassment", scope: { modality: "audio", segment: { start: 20, end: 30 } } };
+        // expected: false (half-open interval [10, 20) and [20, 30) don't overlap)
+        // actual:   true
+        console.log(tagsMatch(a, b));
+        ```
+    validations:
+      required: true
+
+  - type: textarea
+    id: expected
+    attributes:
+      label: Expected behavior
+    validations:
+      required: true
+
+  - type: textarea
+    id: actual
+    attributes:
+      label: Actual behavior
+      description: Include full error output and stack traces if any.
+    validations:
+      required: true
+
+  - type: input
+    id: env
+    attributes:
+      label: Environment
+      description: Node version, OS, package manager.
+      placeholder: "Node 20.11.0, macOS 14.2, pnpm 10.4.1"
+    validations:
+      required: true

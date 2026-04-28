@@ -1,0 +1,44 @@
+name: Feature request
+description: Propose a new capability or surface for tag-kit
+title: "[feat] "
+labels: ["type/feature"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Before filing: read the [README "What tag-kit is NOT"](../../blob/main/README.md#what-tag-kit-is-not) section. Many proposals are deliberately out of scope (persistence, styling, workflow engines).
+
+  - type: textarea
+    id: problem
+    attributes:
+      label: Problem
+      description: What's the real-world annotation workflow that's blocked or awkward today?
+    validations:
+      required: true
+
+  - type: textarea
+    id: proposal
+    attributes:
+      label: Proposal
+      description: What would you like to see? A new schema field, a new matching rule, a new UI primitive?
+    validations:
+      required: true
+
+  - type: textarea
+    id: alternatives
+    attributes:
+      label: Alternatives considered
+      description: Other ways to solve this — userland helpers, render-prop overrides, custom matching wrappers. It's fine to say "none" if you're unsure.
+
+  - type: dropdown
+    id: scope_check
+    attributes:
+      label: Does this fit tag-kit's scope?
+      description: |
+        See README "What tag-kit is NOT" — not a persistence layer, not an active-learning loop, not a workflow engine, not a styled UI library.
+      options:
+        - "Yes, fits within the scope"
+        - "Unsure — would like maintainer input"
+        - "This is a deliberate scope-boundary discussion"
+    validations:
+      required: true
