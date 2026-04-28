@@ -35,13 +35,7 @@ export interface TagChipRenderInfo {
  * Pass a `children` render-prop to take full control over the markup
  * (drop the chip into your design-system Badge / Tag primitive).
  */
-export function TagChip({
-  tag,
-  entry,
-  state,
-  onRemove,
-  children,
-}: TagChipProps) {
+export function TagChip({ tag, entry, state, onRemove, children }: TagChipProps) {
   const label = entry?.displayName ?? tag.tagId;
   const severity = entry?.severity ?? "neutral";
   const title = tag.note ? `${tag.tagId} — ${tag.note}` : tag.tagId;
@@ -64,9 +58,7 @@ export function TagChip({
       title={title}
     >
       <span data-tag-kit="chip-label">{label}</span>
-      {state && (
-        <span data-tag-kit="chip-state">{state}</span>
-      )}
+      {state && <span data-tag-kit="chip-state">{state}</span>}
       {onRemove && (
         <button
           type="button"

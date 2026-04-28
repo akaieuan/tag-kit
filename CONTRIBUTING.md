@@ -49,6 +49,7 @@ All three should be clean. CI runs the same on Ubuntu + macOS, Node 20 + 22.
 Good issue title: `tagsMatch returns false when scope.span ranges abut at the boundary`. Bad: `matching is broken`.
 
 Include:
+
 - tag-kit version (from `packages/core/package.json` or `packages/ui/package.json`)
 - Node version
 - A minimal reproduction — usually a few-line TypeScript snippet that constructs the tags and shows the unexpected output

@@ -16,11 +16,7 @@
  */
 
 export { TagPicker, type TagPickerProps } from "./TagPicker.js";
-export {
-  TagChip,
-  type TagChipProps,
-  type TagChipRenderInfo,
-} from "./TagChip.js";
+export { TagChip, type TagChipProps, type TagChipRenderInfo } from "./TagChip.js";
 
 export type {
   ReviewerTag,

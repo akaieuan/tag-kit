@@ -63,11 +63,6 @@ export function tagsMatch(
 }
 
 /** Half-open interval intersection: [aStart, aEnd) ∩ [bStart, bEnd) ≠ ∅. */
-function rangesOverlap(
-  aStart: number,
-  aEnd: number,
-  bStart: number,
-  bEnd: number,
-): boolean {
+function rangesOverlap(aStart: number, aEnd: number, bStart: number, bEnd: number): boolean {
   return aStart < bEnd && bStart < aEnd;
 }

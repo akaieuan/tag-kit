@@ -66,7 +66,9 @@ const reviewerTags: ReviewerTag[] = [
 const agreement = tagPrecisionRecall([
   {
     entityId: "event-1",
-    expected: [{ tagId: "audio.harassment", scope: { modality: "audio", segment: { start: 10, end: 30 } } }],
+    expected: [
+      { tagId: "audio.harassment", scope: { modality: "audio", segment: { start: 10, end: 30 } } },
+    ],
     predicted: reviewerTags,
   },
 ]);
@@ -75,12 +77,12 @@ const agreement = tagPrecisionRecall([
 
 The matching engine does **scope-aware overlap**:
 
-| Annotator A | Annotator B | Match? |
-|---|---|---|
-| `audio` segment `[10, 30]` | `audio` segment `[12, 24]` | ✅ overlap |
-| `audio` segment `[0, 10]` | `audio` segment `[100, 110]` | ❌ disjoint |
-| `audio` whole-track | `audio` segment `[12, 24]` | ✅ broader contains narrower |
-| `video` whole-track | `audio` segment `[12, 24]` | ❌ different modality |
+| Annotator A                | Annotator B                  | Match?                       |
+| -------------------------- | ---------------------------- | ---------------------------- |
+| `audio` segment `[10, 30]` | `audio` segment `[12, 24]`   | ✅ overlap                   |
+| `audio` segment `[0, 10]`  | `audio` segment `[100, 110]` | ❌ disjoint                  |
+| `audio` whole-track        | `audio` segment `[12, 24]`   | ✅ broader contains narrower |
+| `video` whole-track        | `audio` segment `[12, 24]`   | ❌ different modality        |
 
 ### `@tag-kit/ui` — headless React primitives
 
@@ -92,17 +94,19 @@ import { TagPicker, TagChip } from "@tag-kit/ui";
   staged={stagedTags}
   modality={event.primaryModality}
   onPick={handlePick}
-/>
+/>;
 
-{stagedTags.map((tag) => (
-  <TagChip
-    key={tag.tagId}
-    tag={tag}
-    entry={CATALOG.find((c) => c.tagId === tag.tagId)}
-    state="staged"
-    onRemove={() => unstage(tag.tagId)}
-  />
-))}
+{
+  stagedTags.map((tag) => (
+    <TagChip
+      key={tag.tagId}
+      tag={tag}
+      entry={CATALOG.find((c) => c.tagId === tag.tagId)}
+      state="staged"
+      onRemove={() => unstage(tag.tagId)}
+    />
+  ));
+}
 ```
 
 Both components emit semantic `data-tag-kit-*` attributes. **Zero CSS shipped** — bring your own styles via Tailwind, CSS modules, or inline. Pass a `children` render-prop to either component to take full control of the markup (drop into your design-system primitives).

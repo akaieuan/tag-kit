@@ -13,13 +13,7 @@
  */
 import { defineCatalog, type TagCatalogEntry } from "@tag-kit/core";
 
-export type ModerationModality =
-  | "text"
-  | "image"
-  | "video"
-  | "audio"
-  | "link"
-  | "cross-modal";
+export type ModerationModality = "text" | "image" | "video" | "audio" | "link" | "cross-modal";
 
 export type ModerationGroup =
   | "Toxicity"
