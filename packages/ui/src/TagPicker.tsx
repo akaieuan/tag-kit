@@ -41,14 +41,10 @@ export function TagPicker({
 }: TagPickerProps) {
   const [query, setQuery] = useState(initialQuery);
 
-  const stagedIds = useMemo(
-    () => new Set(staged.map((t) => t.tagId)),
-    [staged],
-  );
+  const stagedIds = useMemo(() => new Set(staged.map((t) => t.tagId)), [staged]);
 
   const visible = useMemo(() => {
-    const byModality =
-      modality === null ? catalog.slice() : filterByModality(catalog, modality);
+    const byModality = modality === null ? catalog.slice() : filterByModality(catalog, modality);
     const q = query.trim().toLowerCase();
     if (q.length === 0) return byModality;
     return byModality.filter(
@@ -92,12 +88,8 @@ export function TagPicker({
                       data-tag-kit-severity={entry.severity}
                       onClick={() => onPick({ tagId: entry.tagId })}
                     >
-                      <span data-tag-kit="picker-item-label">
-                        {entry.displayName}
-                      </span>
-                      <span data-tag-kit="picker-item-description">
-                        {entry.description}
-                      </span>
+                      <span data-tag-kit="picker-item-label">{entry.displayName}</span>
+                      <span data-tag-kit="picker-item-description">{entry.description}</span>
                     </button>
                   </li>
                 );

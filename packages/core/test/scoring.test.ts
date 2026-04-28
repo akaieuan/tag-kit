@@ -1,9 +1,5 @@
 import { describe, expect, it } from "vitest";
-import {
-  binaryAgreement,
-  tagPrecisionRecall,
-  type TaggedEntity,
-} from "../src/scoring.js";
+import { binaryAgreement, tagPrecisionRecall, type TaggedEntity } from "../src/scoring.js";
 
 describe("tagPrecisionRecall", () => {
   it("perfect agreement: precision = recall = f1 = 1", () => {
@@ -77,11 +73,17 @@ describe("tagPrecisionRecall", () => {
       {
         entityId: "e1",
         expected: [
-          { tagId: "audio.harassment", scope: { modality: "audio", segment: { start: 0, end: 10 } } },
+          {
+            tagId: "audio.harassment",
+            scope: { modality: "audio", segment: { start: 0, end: 10 } },
+          },
         ],
         predicted: [
           // Same tagId, but disjoint segment — different evidence, not a match.
-          { tagId: "audio.harassment", scope: { modality: "audio", segment: { start: 100, end: 110 } } },
+          {
+            tagId: "audio.harassment",
+            scope: { modality: "audio", segment: { start: 100, end: 110 } },
+          },
         ],
       },
     ];

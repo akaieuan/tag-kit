@@ -45,10 +45,7 @@ describe("scopeOverlaps", () => {
 
   it("same modality + one has segment + other doesn't → match (broader contains narrower)", () => {
     expect(
-      scopeOverlaps(
-        { modality: "audio", segment: { start: 10, end: 20 } },
-        { modality: "audio" },
-      ),
+      scopeOverlaps({ modality: "audio", segment: { start: 10, end: 20 } }, { modality: "audio" }),
     ).toBe(true);
   });
 
@@ -80,16 +77,17 @@ describe("scopeOverlaps", () => {
 
 describe("tagsMatch", () => {
   it("different tagIds never match regardless of scope", () => {
-    expect(
-      tagsMatch({ tagId: "a" }, { tagId: "b" }),
-    ).toBe(false);
+    expect(tagsMatch({ tagId: "a" }, { tagId: "b" })).toBe(false);
   });
 
   it("same tagId + overlapping scope match", () => {
     expect(
       tagsMatch(
         { tagId: "audio.harassment", scope: { modality: "audio", segment: { start: 0, end: 30 } } },
-        { tagId: "audio.harassment", scope: { modality: "audio", segment: { start: 15, end: 45 } } },
+        {
+          tagId: "audio.harassment",
+          scope: { modality: "audio", segment: { start: 15, end: 45 } },
+        },
       ),
     ).toBe(true);
   });
@@ -98,7 +96,10 @@ describe("tagsMatch", () => {
     expect(
       tagsMatch(
         { tagId: "audio.harassment", scope: { modality: "audio", segment: { start: 0, end: 10 } } },
-        { tagId: "audio.harassment", scope: { modality: "audio", segment: { start: 100, end: 110 } } },
+        {
+          tagId: "audio.harassment",
+          scope: { modality: "audio", segment: { start: 100, end: 110 } },
+        },
       ),
     ).toBe(false);
   });

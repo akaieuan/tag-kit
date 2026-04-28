@@ -65,11 +65,7 @@ describe("filterByModality", () => {
 describe("groupByCategory", () => {
   it("buckets entries into { groupName: entries[] }", () => {
     const grouped = groupByCategory(sample);
-    expect(Object.keys(grouped).sort()).toEqual([
-      "Context",
-      "Safety",
-      "Toxicity",
-    ]);
+    expect(Object.keys(grouped).sort()).toEqual(["Context", "Safety", "Toxicity"]);
     expect(grouped["Toxicity"]).toHaveLength(1);
     expect(grouped["Safety"]).toHaveLength(1);
   });

@@ -75,9 +75,7 @@ export function filterByModality<T extends TagCatalogEntry>(
   modality: string,
 ): T[] {
   return catalog.filter(
-    (e) =>
-      e.applicableModalities.length === 0 ||
-      e.applicableModalities.includes(modality),
+    (e) => e.applicableModalities.length === 0 || e.applicableModalities.includes(modality),
   );
 }
 

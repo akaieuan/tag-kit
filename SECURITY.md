@@ -20,9 +20,9 @@ You can expect an acknowledgement within 72 hours and a remediation plan within 
 tag-kit is pre-1.0; only the latest minor version receives security patches. Once v1.0 ships, this policy will be updated to cover the latest two minors.
 
 | Version | Supported |
-|---|---|
-| 0.1.x | ✅ |
-| < 0.1 | ❌ |
+| ------- | --------- |
+| 0.1.x   | ✅        |
+| < 0.1   | ❌        |
 
 ## Scope
 

@@ -32,9 +32,7 @@ export interface TaggedEntity {
  * Stable sort: alphabetical by tagId so dashboards render consistently
  * across runs.
  */
-export function tagPrecisionRecall(
-  entities: readonly TaggedEntity[],
-): TagAgreement[] {
+export function tagPrecisionRecall(entities: readonly TaggedEntity[]): TagAgreement[] {
   // Per-tag accumulators: tagId → counts.
   const counts = new Map<string, { tp: number; fp: number; fn: number }>();
 
@@ -59,9 +57,7 @@ export function tagPrecisionRecall(
     const consumed = new Set<ExpectedTag>();
     for (const p of entity.predicted) {
       const candidates = expectedByTag.get(p.tagId) ?? [];
-      const match = candidates.find(
-        (e) => !consumed.has(e) && tagsMatch(p, e),
-      );
+      const match = candidates.find((e) => !consumed.has(e) && tagsMatch(p, e));
       if (match) {
         consumed.add(match);
         bump(p.tagId, "tp");
@@ -80,10 +76,7 @@ export function tagPrecisionRecall(
   for (const [tagId, c] of counts) {
     const precision = c.tp + c.fp === 0 ? 0 : c.tp / (c.tp + c.fp);
     const recall = c.tp + c.fn === 0 ? 0 : c.tp / (c.tp + c.fn);
-    const f1 =
-      precision + recall === 0
-        ? 0
-        : (2 * precision * recall) / (precision + recall);
+    const f1 = precision + recall === 0 ? 0 : (2 * precision * recall) / (precision + recall);
     results.push({
       tagId,
       truePositives: c.tp,
@@ -106,10 +99,7 @@ export interface BinarySample {
   predicted: boolean;
 }
 
-export function binaryAgreement(
-  tagId: string,
-  samples: readonly BinarySample[],
-): TagAgreement {
+export function binaryAgreement(tagId: string, samples: readonly BinarySample[]): TagAgreement {
   let tp = 0;
   let fp = 0;
   let fn = 0;
@@ -120,8 +110,7 @@ export function binaryAgreement(
   }
   const precision = tp + fp === 0 ? 0 : tp / (tp + fp);
   const recall = tp + fn === 0 ? 0 : tp / (tp + fn);
-  const f1 =
-    precision + recall === 0 ? 0 : (2 * precision * recall) / (precision + recall);
+  const f1 = precision + recall === 0 ? 0 : (2 * precision * recall) / (precision + recall);
   return {
     tagId,
     truePositives: tp,
