@@ -1,0 +1,72 @@
+name: Release
+
+on:
+  push:
+    tags: ["v*"]
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: "Git tag to check out and publish (e.g. v0.2.0). Required for manual runs."
+        required: true
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    permissions:
+      id-token: write # OIDC for npm Trusted Publishing + provenance attestations
+      contents: read
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.inputs.tag || github.ref }}
+
+      - uses: pnpm/action-setup@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+          registry-url: "https://registry.npmjs.org/"
+
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm -r build
+      - run: pnpm -r typecheck
+      - run: pnpm -r test
+
+      - id: dist_tag
+        name: Choose npm dist-tag from git tag
+        run: |
+          ref="${{ github.event.inputs.tag || github.ref_name }}"
+          if [[ "$ref" == *alpha* || "$ref" == *beta* || "$ref" == *rc* ]]; then
+            echo "tag=alpha" >> "$GITHUB_OUTPUT"
+          else
+            echo "tag=latest" >> "$GITHUB_OUTPUT"
+          fi
+
+      # Pack with pnpm (resolves workspace:* deps to concrete versions) then publish
+      # with npm (which performs the OIDC token exchange for npm Trusted Publishing).
+      # pnpm publish on its own doesn't do the OIDC dance and 404s anonymously.
+      - name: Pack all packages
+        run: |
+          mkdir -p /tmp/pkg
+          (cd packages/core && pnpm pack --pack-destination /tmp/pkg)
+          (cd packages/ui && pnpm pack --pack-destination /tmp/pkg)
+          ls -la /tmp/pkg
+
+      - name: Publish @tag-kit/core
+        run: |
+          version=$(node -p "require('./packages/core/package.json').version")
+          if npm view "@tag-kit/core@$version" version >/dev/null 2>&1; then
+            echo "@tag-kit/core@$version already on npm — skipping"
+          else
+            npm publish "/tmp/pkg/tag-kit-core-${version}.tgz" --tag ${{ steps.dist_tag.outputs.tag }} --access public --provenance
+          fi
+
+      - name: Publish @tag-kit/ui
+        run: |
+          version=$(node -p "require('./packages/ui/package.json').version")
+          if npm view "@tag-kit/ui@$version" version >/dev/null 2>&1; then
+            echo "@tag-kit/ui@$version already on npm — skipping"
+          else
+            npm publish "/tmp/pkg/tag-kit-ui-${version}.tgz" --tag ${{ steps.dist_tag.outputs.tag }} --access public --provenance
+          fi
