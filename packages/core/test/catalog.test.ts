@@ -1,9 +1,11 @@
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 import {
   defineCatalog,
   filterByModality,
   findEntry,
   groupByCategory,
+  validateCatalog,
+  type CustomCatalogRule,
   type TagCatalogEntry,
 } from "../src/catalog.js";
 
@@ -261,5 +263,182 @@ describe("defineCatalog", () => {
     expect(msg).toMatch(/EMPTY_GROUP/);
     expect(msg).toMatch(/INVALID_TAG_ID_CHARS/);
     expect(msg).toMatch(/4 invalid entries/);
+  });
+});
+
+describe("validateCatalog", () => {
+  it("returns ok=true for a valid catalog with no findings", () => {
+    const result = validateCatalog(sample);
+    expect(result.ok).toBe(true);
+    expect(result.errors).toHaveLength(0);
+    expect(result.warnings).toHaveLength(0);
+    expect(result.all).toHaveLength(0);
+  });
+
+  it("returns ok=false with all built-in errors aggregated, no throw", () => {
+    const result = validateCatalog([
+      {
+        tagId: "",
+        displayName: "x",
+        description: "x",
+        applicableModalities: [],
+        severity: "info",
+        group: "G",
+        supportsSegmentScope: false,
+        supportsSpanScope: false,
+      },
+      {
+        tagId: "bad id",
+        displayName: "x",
+        description: "x",
+        applicableModalities: [],
+        severity: "info",
+        group: "G",
+        supportsSegmentScope: false,
+        supportsSpanScope: false,
+      },
+    ]);
+    expect(result.ok).toBe(false);
+    expect(result.errors.map((e) => e.code)).toContain("EMPTY_TAG_ID");
+    expect(result.errors.map((e) => e.code)).toContain("INVALID_TAG_ID_CHARS");
+  });
+
+  it("applies custom rules after built-ins", () => {
+    const requirePrefix: CustomCatalogRule = {
+      code: "TAGID_PREFIX",
+      validate: (e) => (e.tagId.startsWith("text.") ? null : "must start with text."),
+    };
+    const result = validateCatalog([sample[0]!, sample[1]!], { rules: [requirePrefix] });
+    expect(result.ok).toBe(false);
+    const codes = result.errors.map((e) => e.code);
+    expect(codes).toContain("TAGID_PREFIX");
+    // The first entry "text.toxic" passes; the second "image.nsfw" fails.
+    const prefixError = result.errors.find((e) => e.code === "TAGID_PREFIX");
+    expect(prefixError?.tagId).toBe("image.nsfw");
+  });
+
+  it("respects custom rule severity (warn does not block ok)", () => {
+    // Rule fires on entries that are otherwise valid — emits warnings only.
+    const softCheck: CustomCatalogRule = {
+      code: "TAGID_HAS_DOT",
+      severity: "warn",
+      validate: (e) => (e.tagId.includes(".") ? null : "consider using <modality>.<category>"),
+    };
+    // Use a sample that triggers the warning on at least one entry.
+    const mixed = [
+      sample[0]!, // text.toxic — passes the rule
+      {
+        tagId: "loose-id",
+        displayName: "Loose",
+        description: "no dot",
+        applicableModalities: [] as readonly string[],
+        severity: "info" as const,
+        group: "Misc",
+        supportsSegmentScope: false,
+        supportsSpanScope: false,
+      },
+    ];
+    const result = validateCatalog(mixed, { rules: [softCheck] });
+    expect(result.ok).toBe(true);
+    expect(result.errors).toHaveLength(0);
+    expect(result.warnings.length).toBe(1);
+    expect(result.warnings[0]?.code).toBe("TAGID_HAS_DOT");
+    expect(result.warnings[0]?.tagId).toBe("loose-id");
+  });
+
+  it("supports rule callbacks returning explicit { message, severity }", () => {
+    const escalating: CustomCatalogRule = {
+      code: "ESCALATING",
+      severity: "warn",
+      validate: (e) =>
+        e.tagId.includes("danger") ? { message: "tag uses 'danger'", severity: "error" } : null,
+    };
+    const result = validateCatalog(
+      [
+        {
+          tagId: "text.danger",
+          displayName: "X",
+          description: "X",
+          applicableModalities: [],
+          severity: "info",
+          group: "G",
+          supportsSegmentScope: false,
+          supportsSpanScope: false,
+        },
+      ],
+      { rules: [escalating] },
+    );
+    expect(result.ok).toBe(false);
+    expect(result.errors[0]?.code).toBe("ESCALATING");
+    expect(result.errors[0]?.severity).toBe("error");
+  });
+});
+
+describe("defineCatalog with options", () => {
+  it("severity: 'warn' never throws — emits console.warn for each finding", () => {
+    const warnSpy = vi.spyOn(console, "warn").mockImplementation(() => {});
+    try {
+      const result = defineCatalog(
+        [
+          {
+            tagId: "",
+            displayName: "x",
+            description: "x",
+            applicableModalities: [],
+            severity: "info",
+            group: "G",
+            supportsSegmentScope: false,
+            supportsSpanScope: false,
+          },
+        ],
+        { severity: "warn" },
+      );
+      expect(result).toHaveLength(1); // returned as-is, despite the error
+      expect(warnSpy).toHaveBeenCalled();
+      const calls = warnSpy.mock.calls.map((c) => c[0]);
+      expect(calls.some((m) => String(m).includes("EMPTY_TAG_ID"))).toBe(true);
+    } finally {
+      warnSpy.mockRestore();
+    }
+  });
+
+  it("strict mode (default) still throws on errors but emits warnings", () => {
+    const warnSpy = vi.spyOn(console, "warn").mockImplementation(() => {});
+    const softWarning: CustomCatalogRule = {
+      code: "SOFT",
+      severity: "warn",
+      validate: () => "soft warning",
+    };
+    try {
+      // No errors → no throw, but warnings should hit console.warn.
+      defineCatalog(sample, { rules: [softWarning] });
+      expect(warnSpy).toHaveBeenCalled();
+    } finally {
+      warnSpy.mockRestore();
+    }
+  });
+
+  it("custom rules participate in strict-mode throw", () => {
+    const requirePrefix: CustomCatalogRule = {
+      code: "TAGID_PREFIX",
+      validate: (e) => (e.tagId.startsWith("text.") ? null : "must start with text."),
+    };
+    expect(() =>
+      defineCatalog(
+        [
+          {
+            tagId: "image.nsfw",
+            displayName: "X",
+            description: "X",
+            applicableModalities: [],
+            severity: "info",
+            group: "G",
+            supportsSegmentScope: false,
+            supportsSpanScope: false,
+          },
+        ],
+        { rules: [requirePrefix] },
+      ),
+    ).toThrowError(/TAGID_PREFIX/);
   });
 });
