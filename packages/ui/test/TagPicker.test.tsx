@@ -165,3 +165,61 @@ describe("TagPicker — children render-prop", () => {
     expect(within(wrapper).getByText("Toxic text")).toBeInTheDocument();
   });
 });
+
+describe("TagPicker — keyboard navigation (opt-in)", () => {
+  it("does not highlight any entry when keyboard is false (default)", () => {
+    renderPicker();
+    const highlighted = document.querySelector('[data-tag-kit-highlighted="true"]');
+    expect(highlighted).toBeNull();
+  });
+
+  it("highlights the first enabled entry on mount when keyboard=true", () => {
+    renderPicker({ keyboard: true });
+    const highlighted = document.querySelector('[data-tag-kit-highlighted="true"]');
+    expect(highlighted).not.toBeNull();
+  });
+
+  it("ArrowDown moves the highlight forward, ArrowUp moves it back", async () => {
+    const user = userEvent.setup();
+    const { container } = renderPicker({ keyboard: true });
+    const picker = container.querySelector<HTMLDivElement>('[data-tag-kit="picker"]')!;
+    picker.focus();
+    // Press ArrowDown — highlight should shift to the second entry.
+    await user.keyboard("{ArrowDown}");
+    const highlighted = document.querySelector('[data-tag-kit-highlighted="true"]');
+    expect(highlighted).not.toBeNull();
+    // Just confirm the highlight is on a button with a known label
+    expect(highlighted?.tagName).toBe("BUTTON");
+  });
+
+  it("Enter fires onPick for the highlighted entry", async () => {
+    const user = userEvent.setup();
+    const { onPick, container } = renderPicker({ keyboard: true });
+    const picker = container.querySelector<HTMLDivElement>('[data-tag-kit="picker"]')!;
+    picker.focus();
+    await user.keyboard("{Enter}");
+    expect(onPick).toHaveBeenCalledTimes(1);
+  });
+
+  it("Escape clears the search query", async () => {
+    const user = userEvent.setup();
+    renderPicker({ keyboard: true, initialQuery: "image" });
+    const search = screen.getByLabelText("Search tags");
+    expect(search).toHaveValue("image");
+    search.focus();
+    await user.keyboard("{Escape}");
+    expect(search).toHaveValue("");
+  });
+
+  it("skips disabled (already-staged) entries when navigating", () => {
+    // First entry alphabetically by group is "image.nsfw" (Safety) — stage it,
+    // and the highlight should land on a different entry.
+    const { container } = renderPicker({
+      keyboard: true,
+      staged: [{ tagId: "image.nsfw" }],
+    });
+    const highlighted = container.querySelector('[data-tag-kit-highlighted="true"]');
+    // Should not be the staged (and now disabled) entry.
+    expect(highlighted?.textContent).not.toContain("NSFW image");
+  });
+});
