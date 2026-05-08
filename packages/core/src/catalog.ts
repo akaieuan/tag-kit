@@ -39,36 +39,12 @@ export interface TagCatalogEntry<
   supportsSpanScope: boolean;
 }
 
-/**
- * Helper that returns its argument typed as a readonly catalog. Use in
- * domain code to get exhaustive type narrowing on tagId / modality / group:
- *
- *     const CATALOG = defineCatalog([
- *       { tagId: "text.toxic", ... },
- *       { tagId: "image.nsfw", ... },
- *     ] as const);
- *
- * Validates entries at the boot-time call site and throws on:
- *   - empty/whitespace `tagId`
- *   - duplicate `tagId`
- *   - `tagId` containing characters outside `[a-zA-Z0-9._:-]`
- *   - empty/whitespace `displayName`, `description`, or `group`
- *
- * On invalid input, throws an `Error` whose message lists every error
- * with its `[index N]` and the entry's `tagId`. On valid input, returns
- * the input unchanged.
- */
-export function defineCatalog<TEntry extends TagCatalogEntry>(
-  entries: readonly TEntry[],
-): readonly TEntry[] {
-  const errors = validateCatalogEntries(entries);
-  if (errors.length > 0) {
-    throw new Error(formatCatalogErrors(errors));
-  }
-  return entries;
-}
+// -----------------------------------------------------------------------------
+// Validation types — exported so consumers can format errors in their own UIs
+// -----------------------------------------------------------------------------
 
-type CatalogValidationCode =
+/** Built-in validation rule codes. Custom rules may use any string code. */
+export type BuiltInCatalogValidationCode =
   | "EMPTY_TAG_ID"
   | "DUPLICATE_TAG_ID"
   | "INVALID_TAG_ID_CHARS"
@@ -76,43 +52,151 @@ type CatalogValidationCode =
   | "EMPTY_DESCRIPTION"
   | "EMPTY_GROUP";
 
-interface CatalogValidationError {
+/** Open string union so custom rules can ship their own codes. */
+export type CatalogValidationCode = BuiltInCatalogValidationCode | (string & {});
+
+/** One validation finding. `severity: "error"` blocks `defineCatalog` in
+ *  strict mode; `"warn"` is informational and never throws. */
+export interface CatalogValidationError {
   index: number;
   tagId?: string;
   code: CatalogValidationCode;
+  severity: "error" | "warn";
   message: string;
 }
 
-const VALID_TAG_ID_PATTERN = /^[a-zA-Z0-9._:-]+$/;
+/**
+ * A consumer-supplied validation rule. Returns:
+ *   - `null` if the entry passes
+ *   - a `string` to fail with that message (uses the rule's default severity)
+ *   - an object `{ message, severity }` to fail with explicit severity
+ */
+export interface CustomCatalogRule<T extends TagCatalogEntry = TagCatalogEntry> {
+  /** Stable identifier for this rule. Surfaces in error messages. */
+  code: string;
+  /** Default severity if `validate` returns a bare string. Defaults to `"error"`. */
+  severity?: "error" | "warn";
+  validate: (
+    entry: T,
+    index: number,
+    all: readonly T[],
+  ) => string | { message: string; severity?: "error" | "warn" } | null;
+}
 
-function validateCatalogEntries(entries: readonly TagCatalogEntry[]): CatalogValidationError[] {
-  const errors: CatalogValidationError[] = [];
+/** Options accepted by `defineCatalog` and `validateCatalog`. */
+export interface DefineCatalogOptions<T extends TagCatalogEntry = TagCatalogEntry> {
+  /** Additional rules applied after the built-ins. */
+  rules?: readonly CustomCatalogRule<T>[];
+  /**
+   * "strict" (default) — throw on any error-severity finding.
+   * "warn"            — never throw; emit console.warn for each finding.
+   */
+  severity?: "strict" | "warn";
+}
+
+/** Aggregated validation result returned by `validateCatalog`. */
+export interface ValidateCatalogResult {
+  /** True iff there are no `error`-severity findings (warnings are tolerated). */
+  ok: boolean;
+  errors: readonly CatalogValidationError[];
+  warnings: readonly CatalogValidationError[];
+  /** All findings (errors ∪ warnings) in their original order. */
+  all: readonly CatalogValidationError[];
+}
+
+// -----------------------------------------------------------------------------
+// Public API
+// -----------------------------------------------------------------------------
+
+/**
+ * Helper that returns its argument typed as a readonly catalog. Validates
+ * entries at the boot-time call site.
+ *
+ *     const CATALOG = defineCatalog([...]);
+ *
+ *     // With custom rules:
+ *     defineCatalog(entries, {
+ *       rules: [{
+ *         code: "TAG_ID_PREFIX",
+ *         validate: (e) => e.tagId.startsWith("text.") ? null : "must start with text.",
+ *       }],
+ *     });
+ *
+ *     // Tolerant mode — never throws, emits console.warn:
+ *     defineCatalog(entries, { severity: "warn" });
+ *
+ * Default behavior unchanged from 0.2.x: built-in rules run, errors throw.
+ */
+export function defineCatalog<TEntry extends TagCatalogEntry>(
+  entries: readonly TEntry[],
+  options?: DefineCatalogOptions<TEntry>,
+): readonly TEntry[] {
+  const result = validateCatalog(entries, { rules: options?.rules });
+  const mode = options?.severity ?? "strict";
+
+  if (mode === "warn") {
+    for (const finding of result.all) {
+      console.warn(formatSingleFinding(finding));
+    }
+    return entries;
+  }
+
+  // strict mode
+  if (result.errors.length > 0) {
+    throw new Error(formatCatalogErrors(result.errors));
+  }
+  // Warnings still surface even in strict mode — they're informational, never block.
+  for (const finding of result.warnings) {
+    console.warn(formatSingleFinding(finding));
+  }
+  return entries;
+}
+
+/**
+ * Validate a catalog without throwing. Returns the result as data so
+ * consumers loading catalogs from config files (YAML, JSON, etc.) can
+ * surface errors to the user instead of crashing the app.
+ *
+ *     const result = validateCatalog(entries);
+ *     if (!result.ok) {
+ *       for (const err of result.errors) console.error(err);
+ *     }
+ */
+export function validateCatalog<TEntry extends TagCatalogEntry>(
+  entries: readonly TEntry[],
+  options?: { rules?: readonly CustomCatalogRule<TEntry>[] },
+): ValidateCatalogResult {
+  const findings: CatalogValidationError[] = [];
   const seen = new Map<string, number>();
 
   for (let i = 0; i < entries.length; i++) {
     const entry = entries[i]!;
     const trimmedTagId = entry.tagId?.trim() ?? "";
 
+    // Built-in: tagId presence + character set + uniqueness
     if (trimmedTagId === "") {
-      errors.push({
+      findings.push({
         index: i,
         code: "EMPTY_TAG_ID",
+        severity: "error",
         message: "tagId is empty or whitespace-only",
       });
     } else if (!VALID_TAG_ID_PATTERN.test(entry.tagId)) {
-      errors.push({
+      findings.push({
         index: i,
         tagId: entry.tagId,
         code: "INVALID_TAG_ID_CHARS",
+        severity: "error",
         message: `tagId "${entry.tagId}" contains characters outside [a-zA-Z0-9._:-]`,
       });
     } else {
       const previous = seen.get(entry.tagId);
       if (previous !== undefined) {
-        errors.push({
+        findings.push({
           index: i,
           tagId: entry.tagId,
           code: "DUPLICATE_TAG_ID",
+          severity: "error",
           message: `tagId "${entry.tagId}" duplicates entry at index ${previous}`,
         });
       } else {
@@ -120,46 +204,85 @@ function validateCatalogEntries(entries: readonly TagCatalogEntry[]): CatalogVal
       }
     }
 
+    // Built-in: required strings
     if (!entry.displayName || entry.displayName.trim() === "") {
-      errors.push({
+      findings.push({
         index: i,
         tagId: entry.tagId || undefined,
         code: "EMPTY_DISPLAY_NAME",
+        severity: "error",
         message: "displayName is empty or whitespace-only",
       });
     }
     if (!entry.description || entry.description.trim() === "") {
-      errors.push({
+      findings.push({
         index: i,
         tagId: entry.tagId || undefined,
         code: "EMPTY_DESCRIPTION",
+        severity: "error",
         message: "description is empty or whitespace-only",
       });
     }
     if (!entry.group || entry.group.trim() === "") {
-      errors.push({
+      findings.push({
         index: i,
         tagId: entry.tagId || undefined,
         code: "EMPTY_GROUP",
+        severity: "error",
         message: "group is empty or whitespace-only",
       });
     }
+
+    // Custom rules
+    for (const rule of options?.rules ?? []) {
+      const result = rule.validate(entry, i, entries);
+      if (result === null) continue;
+      const defaultSeverity = rule.severity ?? "error";
+      if (typeof result === "string") {
+        findings.push({
+          index: i,
+          tagId: entry.tagId || undefined,
+          code: rule.code,
+          severity: defaultSeverity,
+          message: result,
+        });
+      } else {
+        findings.push({
+          index: i,
+          tagId: entry.tagId || undefined,
+          code: rule.code,
+          severity: result.severity ?? defaultSeverity,
+          message: result.message,
+        });
+      }
+    }
   }
 
-  return errors;
+  const errors = findings.filter((f) => f.severity === "error");
+  const warnings = findings.filter((f) => f.severity === "warn");
+  return { ok: errors.length === 0, errors, warnings, all: findings };
 }
+
+const VALID_TAG_ID_PATTERN = /^[a-zA-Z0-9._:-]+$/;
 
 function formatCatalogErrors(errors: readonly CatalogValidationError[]): string {
   const header =
     errors.length === 1
       ? "defineCatalog: 1 invalid entry"
       : `defineCatalog: ${errors.length} invalid entries`;
-  const lines = errors.map((e) => {
-    const idLabel = e.tagId ? ` tagId="${e.tagId}"` : "";
-    return `  [index ${e.index}]${idLabel} ${e.code}: ${e.message}`;
-  });
+  const lines = errors.map((e) => formatSingleFinding(e));
   return `${header}\n${lines.join("\n")}`;
 }
+
+function formatSingleFinding(f: CatalogValidationError): string {
+  const idLabel = f.tagId ? ` tagId="${f.tagId}"` : "";
+  const sevLabel = f.severity === "warn" ? " (warn)" : "";
+  return `  [index ${f.index}]${idLabel} ${f.code}${sevLabel}: ${f.message}`;
+}
+
+// -----------------------------------------------------------------------------
+// Lookup helpers (unchanged)
+// -----------------------------------------------------------------------------
 
 /** Lookup by tagId. Returns undefined for unknown ids. O(n) — catalogs are small. */
 export function findEntry<T extends TagCatalogEntry>(
