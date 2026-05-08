@@ -1,4 +1,11 @@
-import { useMemo, useState, type ReactNode } from "react";
+import {
+  useCallback,
+  useEffect,
+  useMemo,
+  useState,
+  type KeyboardEvent,
+  type ReactNode,
+} from "react";
 import {
   filterByModality,
   groupByCategory,
@@ -17,6 +24,13 @@ export interface TagPickerProps {
   onPick: (tag: ReviewerTag) => void;
   /** Optional initial query — useful for tests + deep-linking. */
   initialQuery?: string;
+  /** Opt-in arrow-key navigation. When true:
+   *   - ArrowDown / ArrowUp move the highlight through the visible list
+   *     (skipping disabled entries).
+   *   - Enter fires `onPick` for the highlighted entry.
+   *   - Escape clears the search query.
+   *  Off by default to keep the headless component truly opinion-free. */
+  keyboard?: boolean;
   /** Render slot — wrap the picker content in your own popover / sheet / modal.
    *  Defaults to a plain `<div>` so the picker works headless. */
   children?: (content: ReactNode) => ReactNode;
@@ -30,6 +44,10 @@ export interface TagPickerProps {
  * popover / sheet / dropdown and style the markup with whatever your app
  * uses (Tailwind, CSS modules, vanilla CSS). The data shape is what's
  * stable; the markup is intentionally generic.
+ *
+ * Pass `keyboard` to opt into arrow-key + Enter + Escape navigation. The
+ * highlighted entry is exposed via `data-tag-kit-highlighted="true"` for
+ * styling.
  */
 export function TagPicker({
   catalog,
@@ -37,9 +55,11 @@ export function TagPicker({
   modality,
   onPick,
   initialQuery = "",
+  keyboard = false,
   children,
 }: TagPickerProps) {
   const [query, setQuery] = useState(initialQuery);
+  const [highlightIndex, setHighlightIndex] = useState(0);
 
   const stagedIds = useMemo(() => new Set(staged.map((t) => t.tagId)), [staged]);
 
@@ -60,8 +80,68 @@ export function TagPicker({
     return Object.entries(buckets).sort(([a], [b]) => a.localeCompare(b));
   }, [visible]);
 
+  // Flatten the grouped list to the order the user navigates through.
+  const flat = useMemo(() => {
+    const out: TagCatalogEntry[] = [];
+    for (const [, entries] of grouped) for (const e of entries) out.push(e);
+    return out;
+  }, [grouped]);
+
+  // Reset highlight when the visible set changes (search, modality flip).
+  useEffect(() => {
+    if (!keyboard) return;
+    const firstEnabled = flat.findIndex((e) => !stagedIds.has(e.tagId));
+    setHighlightIndex(firstEnabled === -1 ? 0 : firstEnabled);
+  }, [keyboard, flat, stagedIds]);
+
+  const moveHighlight = useCallback(
+    (delta: 1 | -1) => {
+      if (flat.length === 0) return;
+      let i = highlightIndex;
+      // Skip disabled entries.
+      for (let step = 0; step < flat.length; step++) {
+        i = (i + delta + flat.length) % flat.length;
+        const entry = flat[i]!;
+        if (!stagedIds.has(entry.tagId)) {
+          setHighlightIndex(i);
+          return;
+        }
+      }
+    },
+    [flat, highlightIndex, stagedIds],
+  );
+
+  const handleKeyDown = useCallback(
+    (e: KeyboardEvent<HTMLDivElement>) => {
+      if (!keyboard) return;
+      if (e.key === "ArrowDown") {
+        e.preventDefault();
+        moveHighlight(1);
+      } else if (e.key === "ArrowUp") {
+        e.preventDefault();
+        moveHighlight(-1);
+      } else if (e.key === "Enter") {
+        const entry = flat[highlightIndex];
+        if (entry && !stagedIds.has(entry.tagId)) {
+          e.preventDefault();
+          onPick({ tagId: entry.tagId });
+        }
+      } else if (e.key === "Escape") {
+        if (query.length > 0) {
+          e.preventDefault();
+          setQuery("");
+        }
+      }
+    },
+    [keyboard, moveHighlight, flat, highlightIndex, stagedIds, onPick, query],
+  );
+
   const content = (
-    <div data-tag-kit="picker">
+    <div
+      data-tag-kit="picker"
+      data-tag-kit-keyboard={keyboard ? "true" : "false"}
+      onKeyDown={handleKeyDown}
+    >
       <div data-tag-kit="picker-search">
         <input
           aria-label="Search tags"
@@ -80,12 +160,15 @@ export function TagPicker({
             <ul data-tag-kit="picker-list">
               {entries.map((entry) => {
                 const isStaged = stagedIds.has(entry.tagId);
+                const flatIndex = flat.indexOf(entry);
+                const isHighlighted = keyboard && flatIndex === highlightIndex && !isStaged;
                 return (
                   <li key={entry.tagId} data-tag-kit="picker-item">
                     <button
                       type="button"
                       disabled={isStaged}
                       data-tag-kit-severity={entry.severity}
+                      data-tag-kit-highlighted={isHighlighted ? "true" : undefined}
                       onClick={() => onPick({ tagId: entry.tagId })}
                     >
                       <span data-tag-kit="picker-item-label">{entry.displayName}</span>
