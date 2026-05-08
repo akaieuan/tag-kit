@@ -47,6 +47,10 @@
     "./builder": {
       "types": "./dist/builder.d.ts",
       "import": "./dist/builder.js"
+    },
+    "./strategies": {
+      "types": "./dist/strategies.d.ts",
+      "import": "./dist/strategies.js"
     }
   },
   "files": [

@@ -1,5 +1,6 @@
 import type { ExpectedTag, ReviewerTag, TagAgreement } from "./schema.js";
 import { tagsMatch } from "./matching.js";
+import { strictMatch, type MatchStrategy } from "./strategies.js";
 
 /**
  * Agreement scoring — precision / recall / F1 per tag, aggregated across
@@ -29,10 +30,21 @@ export interface TaggedEntity {
  * `TagAgreement` row per `tagId` that appeared in either the expected or
  * predicted set on any entity.
  *
- * Stable sort: alphabetical by tagId so dashboards render consistently
- * across runs.
+ * The optional `strategy` parameter swaps in alternative matching rules
+ * (e.g. `looseMatch`, `fuzzyMatch({ distance: 1 })`, `confidentMatch({...})`).
+ * Defaults to `strictMatch` — the conservative scope-overlap rules that
+ * shipped in 0.1.x. With `strategy` omitted, output is byte-for-byte
+ * identical to pre-strategy releases.
+ *
+ * Important — `fuzzyMatch` uses `tagId` similarity to decide matches,
+ * but the returned `TagAgreement` is still keyed by the *predicted*
+ * `tagId`. Aggregation is alphabetical by tagId so dashboards render
+ * consistently across runs.
  */
-export function tagPrecisionRecall(entities: readonly TaggedEntity[]): TagAgreement[] {
+export function tagPrecisionRecall(
+  entities: readonly TaggedEntity[],
+  strategy: MatchStrategy = strictMatch,
+): TagAgreement[] {
   // Per-tag accumulators: tagId → counts.
   const counts = new Map<string, { tp: number; fp: number; fn: number }>();
 
@@ -42,27 +54,45 @@ export function tagPrecisionRecall(entities: readonly TaggedEntity[]): TagAgreem
     counts.set(tagId, c);
   };
 
-  for (const entity of entities) {
-    // Index expected by tagId so we can match each predicted against
-    // candidates with the same id and overlapping scope.
-    const expectedByTag = new Map<string, ExpectedTag[]>();
-    for (const e of entity.expected) {
-      const arr = expectedByTag.get(e.tagId) ?? [];
-      arr.push(e);
-      expectedByTag.set(e.tagId, arr);
-    }
+  // Fast-path the strict default: keeps the original tagId index for O(1)
+  // expected-bucket lookup. Custom strategies fall back to a full scan
+  // because they may not be tagId-keyed (e.g. fuzzyMatch).
+  const isStrict = strategy === strictMatch;
 
-    // Match predicted → expected. Each expected slot is consumed at most
-    // once so reviewers tagging the same span twice don't get double credit.
+  for (const entity of entities) {
     const consumed = new Set<ExpectedTag>();
-    for (const p of entity.predicted) {
-      const candidates = expectedByTag.get(p.tagId) ?? [];
-      const match = candidates.find((e) => !consumed.has(e) && tagsMatch(p, e));
-      if (match) {
-        consumed.add(match);
-        bump(p.tagId, "tp");
-      } else {
-        bump(p.tagId, "fp");
+
+    if (isStrict) {
+      // Index expected by tagId so we can match each predicted against
+      // candidates with the same id and overlapping scope.
+      const expectedByTag = new Map<string, ExpectedTag[]>();
+      for (const e of entity.expected) {
+        const arr = expectedByTag.get(e.tagId) ?? [];
+        arr.push(e);
+        expectedByTag.set(e.tagId, arr);
+      }
+
+      for (const p of entity.predicted) {
+        const candidates = expectedByTag.get(p.tagId) ?? [];
+        const match = candidates.find((e) => !consumed.has(e) && tagsMatch(p, e));
+        if (match) {
+          consumed.add(match);
+          bump(p.tagId, "tp");
+        } else {
+          bump(p.tagId, "fp");
+        }
+      }
+    } else {
+      // Strategy-aware path — each predicted is checked against every
+      // unconsumed expected. O(n*m) per entity; fine for typical sizes.
+      for (const p of entity.predicted) {
+        const match = entity.expected.find((e) => !consumed.has(e) && strategy.match(p, e));
+        if (match) {
+          consumed.add(match);
+          bump(p.tagId, "tp");
+        } else {
+          bump(p.tagId, "fp");
+        }
       }
     }
 
