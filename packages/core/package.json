@@ -43,6 +43,10 @@
     "./matching": {
       "types": "./dist/matching.d.ts",
       "import": "./dist/matching.js"
+    },
+    "./builder": {
+      "types": "./dist/builder.d.ts",
+      "import": "./dist/builder.js"
     }
   },
   "files": [
