@@ -1,6 +1,6 @@
 {
   "name": "@tag-kit/core",
-  "version": "0.2.0",
+  "version": "0.3.0",
   "description": "Schema, catalog helpers, agreement scoring, and scope-overlap matching for human-in-the-loop tagging workflows. Domain-agnostic — bring your own taxonomy.",
   "license": "MIT",
   "author": "Ieuan King",
