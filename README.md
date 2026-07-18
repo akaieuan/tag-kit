@@ -5,6 +5,8 @@
 [![pnpm](https://img.shields.io/badge/pnpm-10-orange.svg)](#)
 [![TypeScript](https://img.shields.io/badge/TypeScript-strict-blue.svg)](#)
 
+> **Status:** v0.3.0 · `@tag-kit/core` + `@tag-kit/ui` on npm · part of [akaOSS](https://www.akaoss.dev/projects/tag-kit)
+
 **Structured tagging primitives for human-in-the-loop annotation workflows.** Per-modality scoping, scope-aware agreement scoring, framework-agnostic schema. Bring your own taxonomy, bring your own UI, bring your own scoring loop — `tag-kit` ships the substrate.
 
 ```bash
@@ -137,6 +139,8 @@ tag-kit/
 - **Not a styled UI library.** Headless React only. Style with what you have.
 
 ## Sibling projects
+
+All of these live under [akaOSS](https://www.akaoss.dev) — one thesis, five projects, a findings feed.
 
 - [`inertial`](https://github.com/akaieuan/inertial-moderation-tool) — the open-source AI content moderation toolkit `tag-kit` was extracted from. Real working consumer.
 - [`eval-kit`](https://github.com/akaieuan/eval-kit) — evaluation framework for collaborative-task agents. Different problem domain; same authoring style.
