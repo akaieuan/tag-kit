@@ -30,15 +30,10 @@ Most "tagging" features in HITL tools are unstructured strings — you type a la
 
 ### `@tag-kit/core` — schema + scoring + matching
 
-```ts
-import {
-  defineCatalog,
-  filterByModality,
-  tagPrecisionRecall,
-  tagsMatch,
-  type ReviewerTag,
-  type ExpectedTag,
-} from "@tag-kit/core";
+<!-- The `check` token on the fence typechecks this block in CI — see scripts/readme-check.mjs. -->
+
+```ts check
+import { defineCatalog, tagPrecisionRecall, type ReviewerTag } from "@tag-kit/core";
 
 // 1. Define your domain's vocabulary.
 const CATALOG = defineCatalog([
@@ -88,26 +83,47 @@ The matching engine does **scope-aware overlap**:
 
 ### `@tag-kit/ui` — headless React primitives
 
-```tsx
+```tsx check
+import { useState } from "react";
 import { TagPicker, TagChip } from "@tag-kit/ui";
+import { defineCatalog, type ReviewerTag } from "@tag-kit/core";
 
-<TagPicker
-  catalog={CATALOG}
-  staged={stagedTags}
-  modality={event.primaryModality}
-  onPick={handlePick}
-/>;
+const CATALOG = defineCatalog([
+  {
+    tagId: "audio.harassment",
+    displayName: "Audio harassment",
+    description: "Spoken harassment, slurs, or threats.",
+    applicableModalities: ["audio", "video"],
+    severity: "danger",
+    group: "Audio",
+    supportsSegmentScope: true,
+    supportsSpanScope: false,
+  },
+]);
 
-{
-  stagedTags.map((tag) => (
-    <TagChip
-      key={tag.tagId}
-      tag={tag}
-      entry={CATALOG.find((c) => c.tagId === tag.tagId)}
-      state="staged"
-      onRemove={() => unstage(tag.tagId)}
-    />
-  ));
+function TagEditor({ modality }: { modality: string }) {
+  const [staged, setStaged] = useState<ReviewerTag[]>([]);
+  const unstage = (tagId: string) => setStaged((tags) => tags.filter((t) => t.tagId !== tagId));
+
+  return (
+    <>
+      <TagPicker
+        catalog={CATALOG}
+        staged={staged}
+        modality={modality}
+        onPick={(tag) => setStaged((tags) => [...tags, tag])}
+      />
+      {staged.map((tag) => (
+        <TagChip
+          key={tag.tagId}
+          tag={tag}
+          entry={CATALOG.find((c) => c.tagId === tag.tagId)}
+          state="staged"
+          onRemove={() => unstage(tag.tagId)}
+        />
+      ))}
+    </>
+  );
 }
 ```
 

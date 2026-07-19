@@ -4,7 +4,14 @@ import reactHooks from "eslint-plugin-react-hooks";
 
 export default [
   {
-    ignores: ["**/dist/**", "**/node_modules/**", "**/*.tsbuildinfo", "pnpm-lock.yaml"],
+    ignores: [
+      "**/dist/**",
+      "**/node_modules/**",
+      "**/*.tsbuildinfo",
+      "pnpm-lock.yaml",
+      ".readme-check/**",
+      "api-surface/**",
+    ],
   },
   js.configs.recommended,
   ...tseslint.configs.recommended,
@@ -19,6 +26,16 @@ export default [
     files: ["**/*.test.ts", "**/*.test.tsx"],
     rules: {
       "@typescript-eslint/no-non-null-assertion": "off",
+    },
+  },
+  {
+    // Node-only credibility-harness scripts.
+    files: ["scripts/**/*.mjs"],
+    languageOptions: {
+      globals: {
+        console: "readonly",
+        process: "readonly",
+      },
     },
   },
 ];

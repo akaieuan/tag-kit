@@ -11,3 +11,4 @@ coverage
 *.tgz
 .claude/
 .next
+.readme-check
