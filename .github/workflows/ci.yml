@@ -30,3 +30,65 @@ jobs:
       - run: pnpm lint
       - run: pnpm format:check
       - run: pnpm -r test
+
+  # ── Credibility harness (P0) ────────────────────────────────────────────────
+  # Independent jobs — the checks a stranger runs before depending on @tag-kit/*.
+  # Each is self-contained (does its own build) so it can fail in isolation.
+
+  publish-smoke:
+    name: publish smoke (packed artifact works outside the monorepo)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      # Builds + packs both packages, installs the tarballs into scratch consumers
+      # OUTSIDE the repo (moduleResolution bundler AND node16), imports every
+      # exports subpath, and runs @arethetypeswrong/cli per tarball.
+      - run: pnpm smoke:publish
+
+  readme:
+    name: readme-runs (README examples typecheck)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm check:readme
+
+  api-surface:
+    name: api-surface (public .d.ts surface changes only on purpose)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      # Regenerates api-surface/*.d.ts from the fresh build and fails on git drift.
+      - run: pnpm api:check
+
+  zero-dep:
+    name: zero-dep (packed @tag-kit/core ships no dependencies)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      # Inspects the PACKED tarball's package.json — the machine-enforced form of
+      # the README zero-dependency claim.
+      - run: pnpm check:zero-dep
