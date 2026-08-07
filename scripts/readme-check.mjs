@@ -41,7 +41,11 @@ const ROOT = join(HERE, "..");
 const WORK = join(ROOT, ".readme-check");
 
 // READMEs to scan. Add package READMEs here as they appear.
-const READMES = [join(ROOT, "README.md")].filter(existsSync);
+const READMES = [
+  join(ROOT, "README.md"),
+  join(ROOT, "packages/core/README.md"),
+  join(ROOT, "packages/ui/README.md"),
+].filter(existsSync);
 
 function run(cmd, args, opts = {}) {
   const r = spawnSync(cmd, args, { stdio: "inherit", cwd: ROOT, ...opts });

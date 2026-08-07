@@ -2,6 +2,22 @@
 
 All notable changes to tag-kit are documented here. Format loosely follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## [0.3.1] — 2026-08-06
+
+Documentation-only release. No runtime code changed in either package; `dist/` output is identical to 0.3.0.
+
+`@tag-kit/core` and `@tag-kit/ui` were first published to npm at 0.3.0 without per-package READMEs, so both registry pages rendered "ERROR: No README data found!". npm only refreshes a package page on publish, so correcting it requires a version bump.
+
+### Added
+
+- `packages/core/README.md` — install, API tour, the scope-overlap matching table, and scoring notes.
+- `packages/ui/README.md` — install, component/hook reference, a worked `TagEditor` example, and the `data-tag-kit-*` styling contract.
+
+### Fixed
+
+- `scripts/readme-check.mjs` now scans the two package READMEs in addition to the root one, so their `check`-annotated blocks are typechecked against the built public types in CI.
+- `.github/workflows/release.yml` restores the `npm install -g npm@latest` step. npm 11.5.1+ is required for OIDC trusted publishing; the version bundled with Node 22 performs an anonymous PUT that the registry answers with a misleading bare 404.
+
 ## [0.3.0] — 2026-05-08
 
 Developer-experience expansion. Four additive feature buckets — no breaking changes. Default behavior of every existing API (`defineCatalog`, `tagsMatch`, `tagPrecisionRecall`, `<TagPicker />`, `<TagChip />`) is byte-for-byte equivalent to 0.2.x when called without the new options.
