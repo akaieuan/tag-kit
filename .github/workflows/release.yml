@@ -28,10 +28,28 @@ jobs:
           cache: pnpm
           registry-url: "https://registry.npmjs.org/"
 
+      # npm 11.5.1+ has first-class OIDC trusted-publishing support; the version
+      # bundled with Node 22 is older and performs an anonymous PUT, which npm
+      # answers with a 404. This step is load-bearing — it has been dropped in a
+      # refactor once already.
+      - name: Upgrade npm for OIDC trusted publishing
+        run: npm install -g npm@latest
+
       - run: pnpm install --frozen-lockfile
       - run: pnpm -r build
       - run: pnpm -r typecheck
       - run: pnpm -r test
+
+      # The same gates CI runs on every PR. A release should not be the first
+      # time the published artifact is exercised: api:check catches unintended
+      # public-type drift, check:readme proves the documented examples still
+      # compile, check:zero-dep re-proves core's zero-dependency claim against
+      # the packed tarball, and smoke:publish installs both tarballs in a
+      # scratch consumer outside the monorepo.
+      - run: pnpm api:check
+      - run: pnpm check:readme
+      - run: pnpm check:zero-dep
+      - run: pnpm smoke:publish
 
       - id: dist_tag
         name: Choose npm dist-tag from git tag
