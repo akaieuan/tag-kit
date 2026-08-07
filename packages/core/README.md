@@ -93,7 +93,7 @@ Ranges are half-open intervals `[start, end)` — touching is not overlapping. D
 
 ## Status
 
-**v0.3.0** — pre-1.0. `tagId` is a stable foreign key: once shipped in a catalog it should never be renamed.
+**v0.3.1** — API stable for the 0.3.x line; pre-1.0 overall. `tagId` is a stable foreign key: once shipped in a catalog it should never be renamed.
 
 ## Links
 

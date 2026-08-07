@@ -19,14 +19,14 @@ pnpm add @tag-kit/core @tag-kit/ui
 
 ## What's in the box
 
-| Export | What it does |
-|---|---|
-| `TagPicker` | Catalog browser — modality filter, free-text search over `tagId`/`displayName`/`description`, group bucketing. Disables already-staged tags. |
-| `TagChip` | Renders one applied tag, with optional remove. Falls back to the raw `tagId` while the catalog is still loading. |
-| `TagSummary` | Buckets applied tags by group, severity, or modality with counts. |
-| `TagFilter` | Faceted filter UI over a catalog — severity, group, modality. |
-| `useTagStaging` | Staging state for tags a reviewer has picked but not yet saved. |
-| `useTagFilter` | Filters a tag list by modality, severity, group, or query. |
+| Export          | What it does                                                                                                                                 |
+| --------------- | -------------------------------------------------------------------------------------------------------------------------------------------- |
+| `TagPicker`     | Catalog browser — modality filter, free-text search over `tagId`/`displayName`/`description`, group bucketing. Disables already-staged tags. |
+| `TagChip`       | Renders one applied tag, with optional remove. Falls back to the raw `tagId` while the catalog is still loading.                             |
+| `TagSummary`    | Buckets applied tags by group, severity, or modality with counts.                                                                            |
+| `TagFilter`     | Faceted filter UI over a catalog — severity, group, modality.                                                                                |
+| `useTagStaging` | Staging state for tags a reviewer has picked but not yet saved.                                                                              |
+| `useTagFilter`  | Filters a tag list by modality, severity, group, or query.                                                                                   |
 
 ## Usage
 
@@ -81,15 +81,19 @@ void useState;
 Every component renders semantic `data-tag-kit-*` attributes and nothing else — no classes, no inline styles, no design-system assumptions:
 
 ```css
-[data-tag-kit-severity="danger"] { border-color: crimson; }
-[data-tag-kit-state="staged"]    { opacity: 0.7; }
+[data-tag-kit-severity="danger"] {
+  border-color: crimson;
+}
+[data-tag-kit-state="staged"] {
+  opacity: 0.7;
+}
 ```
 
 When attribute hooks aren't enough, pass a `children` render-prop to take over the markup entirely. `TagChip` and `TagFilter` hand you a render-info object (label, severity, state, facet toggles); `TagPicker` hands you the composed content so you can drop it into a popover, modal, or sheet.
 
 ## Status
 
-**v0.3.0** — pre-1.0. Headless by policy: no default styles will be added, not even utility classes.
+**v0.3.1** — API stable for the 0.3.x line; pre-1.0 overall. Headless by policy: no default styles will be added, not even utility classes.
 
 ## Links
 

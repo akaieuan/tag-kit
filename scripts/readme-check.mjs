@@ -55,11 +55,7 @@ const WORK = join(ROOT, ".readme-check");
  * Every published package needs one: npm snapshots the README at publish time,
  * so a package without one has a blank registry page until the next version.
  */
-const REQUIRED_READMES = [
-  "README.md",
-  "packages/core/README.md",
-  "packages/ui/README.md",
-];
+const REQUIRED_READMES = ["README.md", "packages/core/README.md", "packages/ui/README.md"];
 
 const missingReadmes = REQUIRED_READMES.filter((p) => !existsSync(join(ROOT, p)));
 if (missingReadmes.length > 0) {
