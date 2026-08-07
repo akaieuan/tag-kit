@@ -40,12 +40,41 @@ const HERE = dirname(fileURLToPath(import.meta.url));
 const ROOT = join(HERE, "..");
 const WORK = join(ROOT, ".readme-check");
 
-// READMEs to scan. Add package READMEs here as they appear.
-const READMES = [
-  join(ROOT, "README.md"),
-  join(ROOT, "packages/core/README.md"),
-  join(ROOT, "packages/ui/README.md"),
-].filter(existsSync);
+/**
+ * READMEs that MUST exist. This list is deliberately declared rather than
+ * discovered, and deliberately NOT filtered by `existsSync`.
+ *
+ * The earlier version of this file listed only the root README and filtered
+ * the list by existence, which meant a missing README produced a shorter
+ * work-list rather than a failure — and an empty work-list is indistinguishable
+ * from a satisfied one. Both packages shipped to npm at 0.3.0 with no README,
+ * so their registry pages rendered "ERROR: No README data found!" while this
+ * check reported success. A checker that filters its own inputs by existence
+ * cannot report absence; see research note № 007.
+ *
+ * Every published package needs one: npm snapshots the README at publish time,
+ * so a package without one has a blank registry page until the next version.
+ */
+const REQUIRED_READMES = [
+  "README.md",
+  "packages/core/README.md",
+  "packages/ui/README.md",
+];
+
+const missingReadmes = REQUIRED_READMES.filter((p) => !existsSync(join(ROOT, p)));
+if (missingReadmes.length > 0) {
+  console.error(
+    `\n[readme] ✗ ${missingReadmes.length} required README(s) missing:\n` +
+      missingReadmes.map((p) => `    ${p}`).join("\n") +
+      "\n\n[readme] Every published package needs a README — npm snapshots it at\n" +
+      "[readme] publish time, so a package without one has a blank registry page\n" +
+      "[readme] until the next version bump. Add the file, or remove it from\n" +
+      "[readme] REQUIRED_READMES in scripts/readme-check.mjs if the package is private.\n",
+  );
+  process.exit(1);
+}
+
+const READMES = REQUIRED_READMES.map((p) => join(ROOT, p));
 
 function run(cmd, args, opts = {}) {
   const r = spawnSync(cmd, args, { stdio: "inherit", cwd: ROOT, ...opts });
