@@ -40,6 +40,17 @@ jobs:
       - run: pnpm -r typecheck
       - run: pnpm -r test
 
+      # The same gates CI runs on every PR. A release should not be the first
+      # time the published artifact is exercised: api:check catches unintended
+      # public-type drift, check:readme proves the documented examples still
+      # compile, check:zero-dep re-proves core's zero-dependency claim against
+      # the packed tarball, and smoke:publish installs both tarballs in a
+      # scratch consumer outside the monorepo.
+      - run: pnpm api:check
+      - run: pnpm check:readme
+      - run: pnpm check:zero-dep
+      - run: pnpm smoke:publish
+
       - id: dist_tag
         name: Choose npm dist-tag from git tag
         run: |
